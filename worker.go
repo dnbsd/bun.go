@@ -26,7 +26,9 @@ func (w *worker) Start(_ context.Context) error {
 			for _, handler := range w.Handlers {
 				err := handler(c)
 				if err != nil {
-					w.ErrorHandler(err, c)
+					if w.ErrorHandler != nil {
+						w.ErrorHandler(err, c)
+					}
 					break
 				}
 			}

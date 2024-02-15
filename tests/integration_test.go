@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"foo"
 	natsserver "github.com/nats-io/nats-server/v2/test"
@@ -59,6 +60,74 @@ func TestRequestReply(t *testing.T) {
 	}
 
 	cancel()
+}
+
+func TestErrorHandler(t *testing.T) {
+	nc := newNatsServerAndConnection(t)
+	var customError = errors.New("expected error")
+	s := nats_router.New(nats_router.Arguments{
+		Servers: []string{
+			"localhost:14444",
+		},
+	})
+	s.ErrorHandler = func(err error, c *nats_router.Context) {
+		assert.ErrorIs(t, err, customError)
+		_ = c.String(err.Error())
+	}
+	s.Subscribe("test.error", "",
+		func(c *nats_router.Context) error {
+			return customError
+		}, func(c *nats_router.Context) error {
+			assert.NoError(t, errors.New("handler fell through"))
+			return nil
+		})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		err := s.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	time.Sleep(1 * time.Second)
+
+	{
+		resp, err := nc.Request("test.error", []byte("what are you?!"), 2*time.Second)
+		assert.NoError(t, err)
+		assert.Equal(t, customError.Error(), string(resp.Data))
+	}
+}
+
+func TestDefaultErrorHandler(t *testing.T) {
+	nc := newNatsServerAndConnection(t)
+	var customError = errors.New("expected error")
+	s := nats_router.New(nats_router.Arguments{
+		Servers: []string{
+			"localhost:14444",
+		},
+	})
+	s.Subscribe("test.error", "", func(c *nats_router.Context) error {
+		err := customError
+		_ = c.String(err.Error())
+		return err
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		err := s.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	time.Sleep(1 * time.Second)
+
+	{
+		resp, err := nc.Request("test.error", []byte("what are you?!"), 2*time.Second)
+		assert.NoError(t, err)
+		assert.Equal(t, customError.Error(), string(resp.Data))
+	}
 }
 
 func newNatsServerAndConnection(t *testing.T) *nats.Conn {

@@ -35,10 +35,11 @@ type subscribe struct {
 }
 
 type Conn struct {
-	args        Arguments
-	opts        nats.Options
-	subscribeCh chan subscribe
-	schedulerCh chan *worker
+	args         Arguments
+	opts         nats.Options
+	subscribeCh  chan subscribe
+	schedulerCh  chan *worker
+	ErrorHandler ErrorHandlerFunc
 }
 
 func New(args Arguments) *Conn {
@@ -92,6 +93,7 @@ loop:
 				Subscription:   sub,
 				MessageChannel: msgCh,
 				Handlers:       req.Handlers,
+				ErrorHandler:   s.ErrorHandler,
 			}
 			workers = append(workers, w)
 			select {
