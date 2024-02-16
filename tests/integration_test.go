@@ -58,8 +58,6 @@ func TestRequestReply(t *testing.T) {
 		assert.NoError(t, err)
 		assert.JSONEq(t, `{"key":"value"}`, string(resp.Data))
 	}
-
-	cancel()
 }
 
 func TestErrorHandler(t *testing.T) {
@@ -127,6 +125,44 @@ func TestDefaultErrorHandler(t *testing.T) {
 		resp, err := nc.Request("test.error", []byte("what are you?!"), 2*time.Second)
 		assert.NoError(t, err)
 		assert.Equal(t, customError.Error(), string(resp.Data))
+	}
+}
+
+func TestBindRequestData(t *testing.T) {
+	nc := newNatsServerAndConnection(t)
+	s := nats_router.New(nats_router.Arguments{
+		Servers: []string{
+			"localhost:14444",
+		},
+	})
+	s.Subscribe("test.bind", "", func(c *nats_router.Context) error {
+		type data struct {
+			Name string `json:"name"`
+		}
+		var expected = data{
+			Name: "John Doe",
+		}
+		var actual data
+		err := c.BindJSON(&actual)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, actual)
+		return c.String("ok")
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		err := s.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	time.Sleep(1 * time.Second)
+
+	{
+		resp, err := nc.Request("test.bind", []byte(`{"name":"John Doe"}`), 2*time.Second)
+		assert.NoError(t, err)
+		assert.Equal(t, "ok", string(resp.Data))
 	}
 }
 

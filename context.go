@@ -9,6 +9,10 @@ type Context struct {
 	msg *nats.Msg
 }
 
+func (c *Context) BindJSON(v any) error {
+	return json.Unmarshal(c.msg.Data, v)
+}
+
 func (c *Context) Message(msg *nats.Msg) error {
 	return c.msg.RespondMsg(msg)
 }
