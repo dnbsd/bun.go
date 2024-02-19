@@ -3,8 +3,8 @@ package tests
 import (
 	"context"
 	"errors"
-	"fmt"
 	"foo"
+	"github.com/nats-io/nats-server/v2/server"
 	natsserver "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
@@ -13,7 +13,7 @@ import (
 )
 
 func TestRequestReply(t *testing.T) {
-	nc := newNatsServerAndConnection(t)
+	_, nc := newNatsServerAndConnection(t)
 	s := nats_router.New(nats_router.Arguments{
 		Servers: []string{
 			"localhost:14444",
@@ -61,7 +61,7 @@ func TestRequestReply(t *testing.T) {
 }
 
 func TestErrorHandler(t *testing.T) {
-	nc := newNatsServerAndConnection(t)
+	_, nc := newNatsServerAndConnection(t)
 	var customError = errors.New("expected error")
 	s := nats_router.New(nats_router.Arguments{
 		Servers: []string{
@@ -98,7 +98,7 @@ func TestErrorHandler(t *testing.T) {
 }
 
 func TestDefaultErrorHandler(t *testing.T) {
-	nc := newNatsServerAndConnection(t)
+	_, nc := newNatsServerAndConnection(t)
 	var customError = errors.New("expected error")
 	s := nats_router.New(nats_router.Arguments{
 		Servers: []string{
@@ -129,7 +129,7 @@ func TestDefaultErrorHandler(t *testing.T) {
 }
 
 func TestBindRequestData(t *testing.T) {
-	nc := newNatsServerAndConnection(t)
+	_, nc := newNatsServerAndConnection(t)
 	s := nats_router.New(nats_router.Arguments{
 		Servers: []string{
 			"localhost:14444",
@@ -166,17 +166,70 @@ func TestBindRequestData(t *testing.T) {
 	}
 }
 
-func newNatsServerAndConnection(t *testing.T) *nats.Conn {
+func TestStatusHandler(t *testing.T) {
+	srv1 := newNatsServer(14444)
+	defer srv1.Shutdown()
+	srv2 := newNatsServer(14445)
+	defer srv2.Shutdown()
+	statusCh := make(chan string, 3)
+	s := nats_router.New(nats_router.Arguments{
+		Servers: []string{
+			"localhost:14444",
+			"localhost:14445",
+		},
+		NoRandomize: true,
+	})
+	s.ConnectedHandler = func(nc *nats.Conn) {
+		statusCh <- "connected"
+	}
+	s.ReconnectedHandler = func(nc *nats.Conn) {
+		statusCh <- "reconnected"
+	}
+	s.DisconnectedHandler = func(nc *nats.Conn, err error) {
+		statusCh <- "disconnected"
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		err := s.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	time.Sleep(1 * time.Second)
+
+	{
+		status := <-statusCh
+		assert.Equal(t, "connected", status)
+	}
+
+	{
+		srv1.Shutdown()
+		status := <-statusCh
+		assert.Equal(t, "disconnected", status)
+	}
+
+	{
+		status := <-statusCh
+		assert.Equal(t, "reconnected", status)
+	}
+}
+
+func newNatsServer(port int) *server.Server {
 	opts := natsserver.DefaultTestOptions
 	opts.NoLog = false
-	opts.Port = 14444
-	s := natsserver.RunServer(&opts)
-	uri := fmt.Sprintf("nats://%s:%d", opts.Host, opts.Port)
-	nc, err := nats.Connect(uri)
+	opts.Port = port
+	return natsserver.RunServer(&opts)
+}
+
+func newNatsServerAndConnection(t *testing.T) (*server.Server, *nats.Conn) {
+	s := newNatsServer(14444)
+	nc, err := nats.Connect(s.ClientURL())
 	assert.NoError(t, err)
 	t.Cleanup(func() {
 		nc.Close()
 		s.Shutdown()
 	})
-	return nc
+	return s, nc
 }

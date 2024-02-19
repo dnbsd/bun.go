@@ -8,21 +8,21 @@ import (
 )
 
 type Arguments struct {
-	Name                 string
-	Servers              []string
-	AllowReconnect       bool
-	MaxReconnect         int
-	ReconnectWait        time.Duration
-	Timeout              time.Duration
-	DrainTimeout         time.Duration
-	FlusherTimeout       time.Duration
-	PingInterval         time.Duration
-	MaxPingsOut          int
+	Name           string
+	Servers        []string
+	NoRandomize    bool
+	MaxReconnect   int
+	ReconnectWait  time.Duration
+	Timeout        time.Duration
+	DrainTimeout   time.Duration
+	FlusherTimeout time.Duration
+	PingInterval   time.Duration
+	MaxPingsOut    int
+	// TODO: rename!
 	SubChanLen           int
 	User                 string
 	Password             string
 	Token                string
-	RetryOnFailedConnect bool
 	Compression          bool
 	IgnoreAuthErrorAbort bool
 	SkipHostLookup       bool
@@ -35,49 +35,57 @@ type subscribe struct {
 }
 
 type Conn struct {
-	args         Arguments
-	opts         nats.Options
-	subscribeCh  chan subscribe
-	schedulerCh  chan *worker
-	ErrorHandler ErrorHandlerFunc
+	args                Arguments
+	subscribeCh         chan subscribe
+	ConnectedHandler    ConnHandlerFunc
+	ReconnectedHandler  ConnHandlerFunc
+	DisconnectedHandler ConnErrHandlerFunc
+	ErrorHandler        ErrorHandlerFunc
 }
 
 func New(args Arguments) *Conn {
-	opts := nats.Options{
-		Servers:              args.Servers,
-		Name:                 args.Name,
-		AllowReconnect:       args.AllowReconnect,
-		MaxReconnect:         args.MaxReconnect,
-		ReconnectWait:        args.ReconnectWait,
-		Timeout:              args.Timeout,
-		DrainTimeout:         args.DrainTimeout,
-		FlusherTimeout:       args.FlusherTimeout,
-		PingInterval:         args.PingInterval,
-		MaxPingsOut:          args.MaxPingsOut,
-		SubChanLen:           args.SubChanLen,
-		User:                 args.User,
-		Password:             args.Password,
-		Token:                args.Token,
-		RetryOnFailedConnect: args.RetryOnFailedConnect,
-		Compression:          args.Compression,
-		IgnoreAuthErrorAbort: args.IgnoreAuthErrorAbort,
-		SkipHostLookup:       args.SkipHostLookup,
-	}
 	return &Conn{
-		opts:        opts,
+		args:        args,
 		subscribeCh: make(chan subscribe, 255),
-		schedulerCh: make(chan *worker, 128),
 	}
 }
 
 func (s *Conn) Start(ctx context.Context) error {
-	nc, err := s.opts.Connect()
+	opts := nats.Options{
+		Servers:              s.args.Servers,
+		NoRandomize:          s.args.NoRandomize,
+		Name:                 s.args.Name,
+		AllowReconnect:       true,
+		MaxReconnect:         s.args.MaxReconnect,
+		ReconnectWait:        s.args.ReconnectWait,
+		Timeout:              s.args.Timeout,
+		DrainTimeout:         s.args.DrainTimeout,
+		FlusherTimeout:       s.args.FlusherTimeout,
+		PingInterval:         s.args.PingInterval,
+		MaxPingsOut:          s.args.MaxPingsOut,
+		User:                 s.args.User,
+		Password:             s.args.Password,
+		Token:                s.args.Token,
+		RetryOnFailedConnect: true,
+		Compression:          s.args.Compression,
+		IgnoreAuthErrorAbort: s.args.IgnoreAuthErrorAbort,
+		SkipHostLookup:       s.args.SkipHostLookup,
+		ConnectedCB:          s.ConnectedHandler,
+		ReconnectedCB:        s.ReconnectedHandler,
+		DisconnectedErrCB:    s.DisconnectedHandler,
+	}
+
+	nc, err := opts.Connect()
 	if err != nil {
 		return err
 	}
+	defer nc.Close()
 
-	var wg sync.WaitGroup
-	var workers []*worker
+	var (
+		wg          sync.WaitGroup
+		workers     []*worker
+		schedulerCh = make(chan *worker, 128)
+	)
 
 loop:
 	for {
@@ -97,12 +105,12 @@ loop:
 			}
 			workers = append(workers, w)
 			select {
-			case s.schedulerCh <- w:
+			case schedulerCh <- w:
 			case <-ctx.Done():
 				break loop
 			}
 
-		case worker := <-s.schedulerCh:
+		case worker := <-schedulerCh:
 			go func() {
 				wg.Add(1)
 				defer wg.Done()
