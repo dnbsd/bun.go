@@ -1,11 +1,11 @@
 # bun
 
-A framework for building services on top of NATS.
+A no-nonsense framework for building services on top of NATS.
 
 ## Installation
 
 ```
-$ go get github.com/dnbsd/bun.go
+go get github.com/dnbsd/bun.go
 ```
 
 ## Usage
@@ -45,6 +45,12 @@ b.Subscribe("rpc.users.create", func(c *bun.Context){
 })
 ```
 
+### Stream handling
+
+```
+JetStream support is currently a work in progress.
+```
+
 ## License
 
-TODO
+MIT
