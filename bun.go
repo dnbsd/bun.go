@@ -1,4 +1,4 @@
-package nats_router
+package bun
 
 import (
 	"context"
@@ -34,7 +34,7 @@ type subscribe struct {
 	Handlers []HandlerFunc
 }
 
-type Conn struct {
+type Bun struct {
 	args                Arguments
 	subscribeCh         chan subscribe
 	ConnectedHandler    ConnHandlerFunc
@@ -43,14 +43,14 @@ type Conn struct {
 	ErrorHandler        ErrorHandlerFunc
 }
 
-func New(args Arguments) *Conn {
-	return &Conn{
+func New(args Arguments) *Bun {
+	return &Bun{
 		args:        args,
 		subscribeCh: make(chan subscribe, 255),
 	}
 }
 
-func (s *Conn) Start(ctx context.Context) error {
+func (s *Bun) Start(ctx context.Context) error {
 	opts := nats.Options{
 		Servers:              s.args.Servers,
 		NoRandomize:          s.args.NoRandomize,
@@ -136,7 +136,7 @@ loop:
 	return nil
 }
 
-func (s *Conn) Subscribe(subject, group string, handlers ...HandlerFunc) {
+func (s *Bun) Subscribe(subject, group string, handlers ...HandlerFunc) {
 	s.subscribeCh <- subscribe{
 		Subject:  subject,
 		Group:    group,

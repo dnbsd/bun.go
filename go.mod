@@ -1,4 +1,4 @@
-module foo
+module github.com/dnbsd/bun.go
 
 go 1.21.1
 

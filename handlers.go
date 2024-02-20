@@ -1,4 +1,4 @@
-package nats_router
+package bun
 
 import "github.com/nats-io/nats.go"
 

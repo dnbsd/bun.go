@@ -3,7 +3,7 @@ package tests
 import (
 	"context"
 	"errors"
-	"foo"
+	"github.com/dnbsd/bun.go"
 	"github.com/nats-io/nats-server/v2/server"
 	natsserver "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
@@ -14,18 +14,18 @@ import (
 
 func TestRequestReply(t *testing.T) {
 	_, nc := newNatsServerAndConnection(t)
-	s := nats_router.New(nats_router.Arguments{
+	b := bun.New(bun.Arguments{
 		Servers: []string{
 			"localhost:14444",
 		},
 	})
-	s.Subscribe("test.string", "", func(c *nats_router.Context) error {
+	b.Subscribe("test.string", "", func(c *bun.Context) error {
 		return c.String("string!")
 	})
-	s.Subscribe("test.blob", "", func(c *nats_router.Context) error {
+	b.Subscribe("test.blob", "", func(c *bun.Context) error {
 		return c.Blob([]byte("blob!"))
 	})
-	s.Subscribe("test.json", "", func(c *nats_router.Context) error {
+	b.Subscribe("test.json", "", func(c *bun.Context) error {
 		return c.JSON(map[string]any{
 			"key": "value",
 		})
@@ -35,7 +35,7 @@ func TestRequestReply(t *testing.T) {
 	defer cancel()
 
 	go func() {
-		err := s.Start(ctx)
+		err := b.Start(ctx)
 		assert.NoError(t, err)
 	}()
 
@@ -63,19 +63,19 @@ func TestRequestReply(t *testing.T) {
 func TestErrorHandler(t *testing.T) {
 	_, nc := newNatsServerAndConnection(t)
 	var customError = errors.New("expected error")
-	s := nats_router.New(nats_router.Arguments{
+	s := bun.New(bun.Arguments{
 		Servers: []string{
 			"localhost:14444",
 		},
 	})
-	s.ErrorHandler = func(err error, c *nats_router.Context) {
+	s.ErrorHandler = func(err error, c *bun.Context) {
 		assert.ErrorIs(t, err, customError)
 		_ = c.String(err.Error())
 	}
 	s.Subscribe("test.error", "",
-		func(c *nats_router.Context) error {
+		func(c *bun.Context) error {
 			return customError
-		}, func(c *nats_router.Context) error {
+		}, func(c *bun.Context) error {
 			assert.NoError(t, errors.New("handler fell through"))
 			return nil
 		})
@@ -100,12 +100,12 @@ func TestErrorHandler(t *testing.T) {
 func TestDefaultErrorHandler(t *testing.T) {
 	_, nc := newNatsServerAndConnection(t)
 	var customError = errors.New("expected error")
-	s := nats_router.New(nats_router.Arguments{
+	s := bun.New(bun.Arguments{
 		Servers: []string{
 			"localhost:14444",
 		},
 	})
-	s.Subscribe("test.error", "", func(c *nats_router.Context) error {
+	s.Subscribe("test.error", "", func(c *bun.Context) error {
 		err := customError
 		_ = c.String(err.Error())
 		return err
@@ -130,12 +130,12 @@ func TestDefaultErrorHandler(t *testing.T) {
 
 func TestBindRequestData(t *testing.T) {
 	_, nc := newNatsServerAndConnection(t)
-	s := nats_router.New(nats_router.Arguments{
+	s := bun.New(bun.Arguments{
 		Servers: []string{
 			"localhost:14444",
 		},
 	})
-	s.Subscribe("test.bind", "", func(c *nats_router.Context) error {
+	s.Subscribe("test.bind", "", func(c *bun.Context) error {
 		type data struct {
 			Name string `json:"name"`
 		}
@@ -172,7 +172,7 @@ func TestStatusHandler(t *testing.T) {
 	srv2 := newNatsServer(14445)
 	defer srv2.Shutdown()
 	statusCh := make(chan string, 3)
-	s := nats_router.New(nats_router.Arguments{
+	s := bun.New(bun.Arguments{
 		Servers: []string{
 			"localhost:14444",
 			"localhost:14445",
