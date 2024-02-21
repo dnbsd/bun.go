@@ -1,6 +1,7 @@
 # bun
 
-A no-nonsense framework for building services on top of NATS.
+A no-nonsense ("bring your own toppings") framework for building services on top of NATS. Inspired by popular HTTP frameworks
+[echo](https://github.com/labstack/echo) and [gin](https://github.com/gin-gonic/gin).
 
 ## Installation
 
@@ -43,6 +44,28 @@ b.Subscribe("rpc.users.create", func(c *bun.Context){
         ID: 1,
     })
 })
+```
+
+### Connection event handling
+
+```go
+import "github.com/dnbsd/bun.go"
+
+b := bun.New(bun.Arguments{
+    Servers: []string{
+        "localhost",
+    }
+})
+
+b.ConnectedHandler = func(nc *nats.Conn) {
+    println("connected")
+}
+b.ReconnectedHandler = func(nc *nats.Conn) {
+    println("reconnected")
+}
+b.DisconnectedHandler = func(nc *nats.Conn, err error) {
+    println("disconnected")
+}
 ```
 
 ### Stream handling
