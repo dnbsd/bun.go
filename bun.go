@@ -136,7 +136,14 @@ loop:
 	return nil
 }
 
-func (s *Bun) Subscribe(subject, group string, handlers ...HandlerFunc) {
+func (s *Bun) Subscribe(subject string, handlers ...HandlerFunc) {
+	s.subscribeCh <- subscribe{
+		Subject:  subject,
+		Handlers: handlers,
+	}
+}
+
+func (s *Bun) SubscribeGroup(subject, group string, handlers ...HandlerFunc) {
 	s.subscribeCh <- subscribe{
 		Subject:  subject,
 		Group:    group,

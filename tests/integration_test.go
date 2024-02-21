@@ -19,13 +19,13 @@ func TestRequestReply(t *testing.T) {
 			"localhost:14444",
 		},
 	})
-	b.Subscribe("test.string", "", func(c *bun.Context) error {
+	b.Subscribe("test.string", func(c *bun.Context) error {
 		return c.String("string!")
 	})
-	b.Subscribe("test.blob", "", func(c *bun.Context) error {
+	b.Subscribe("test.blob", func(c *bun.Context) error {
 		return c.Blob([]byte("blob!"))
 	})
-	b.Subscribe("test.json", "", func(c *bun.Context) error {
+	b.Subscribe("test.json", func(c *bun.Context) error {
 		return c.JSON(map[string]any{
 			"key": "value",
 		})
@@ -60,6 +60,50 @@ func TestRequestReply(t *testing.T) {
 	}
 }
 
+func TestGroupRequestReply(t *testing.T) {
+	respCh := make(chan string, 2)
+	_, nc := newNatsServerAndConnection(t)
+	b1 := bun.New(bun.Arguments{
+		Servers: []string{
+			"localhost:14444",
+		},
+	})
+	b1.SubscribeGroup("test.string", "testers", func(c *bun.Context) error {
+		respCh <- "b1"
+		return c.String("string!")
+	})
+	b2 := bun.New(bun.Arguments{
+		Servers: []string{
+			"localhost:14444",
+		},
+	})
+	b2.SubscribeGroup("test.string", "testers", func(c *bun.Context) error {
+		respCh <- "b2"
+		return c.String("string!")
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		err := b1.Start(ctx)
+		assert.NoError(t, err)
+	}()
+	go func() {
+		err := b2.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	time.Sleep(1 * time.Second)
+
+	{
+		resp, err := nc.Request("test.string", []byte("what are you?!"), 2*time.Second)
+		assert.NoError(t, err)
+		assert.Equal(t, "string!", string(resp.Data))
+		assert.Len(t, respCh, 1)
+	}
+}
+
 func TestErrorHandler(t *testing.T) {
 	_, nc := newNatsServerAndConnection(t)
 	var customError = errors.New("expected error")
@@ -72,7 +116,7 @@ func TestErrorHandler(t *testing.T) {
 		assert.ErrorIs(t, err, customError)
 		_ = c.String(err.Error())
 	}
-	s.Subscribe("test.error", "",
+	s.Subscribe("test.error",
 		func(c *bun.Context) error {
 			return customError
 		}, func(c *bun.Context) error {
@@ -105,7 +149,7 @@ func TestDefaultErrorHandler(t *testing.T) {
 			"localhost:14444",
 		},
 	})
-	s.Subscribe("test.error", "", func(c *bun.Context) error {
+	s.Subscribe("test.error", func(c *bun.Context) error {
 		err := customError
 		_ = c.String(err.Error())
 		return err
@@ -135,7 +179,7 @@ func TestBindRequestData(t *testing.T) {
 			"localhost:14444",
 		},
 	})
-	s.Subscribe("test.bind", "", func(c *bun.Context) error {
+	s.Subscribe("test.bind", func(c *bun.Context) error {
 		type data struct {
 			Name string `json:"name"`
 		}
