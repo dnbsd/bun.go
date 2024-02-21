@@ -1,5 +1,10 @@
 # bun.go
 
+[![GoDoc][GoDoc-Image]][GoDoc-Url]
+
+[GoDoc-Image]: https://img.shields.io/badge/GoDoc-reference-007d9c
+[GoDoc-Url]: https://pkg.go.dev/github.com/dnbsd/bun.go
+
 A no-nonsense ("bring your own toppings") framework for building services on top of NATS. Inspired by popular HTTP frameworks
 [echo](https://github.com/labstack/echo) and [gin](https://github.com/gin-gonic/gin).
 
