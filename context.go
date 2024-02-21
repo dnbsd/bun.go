@@ -25,6 +25,10 @@ func (c *Context) String(s string) error {
 	return c.msg.Respond([]byte(s))
 }
 
+func (c *Context) Error(err error) error {
+	return c.msg.Respond([]byte(err.Error()))
+}
+
 func (c *Context) JSON(v any) error {
 	b, err := json.Marshal(v)
 	if err != nil {
