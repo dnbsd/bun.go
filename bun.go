@@ -50,6 +50,9 @@ func New(args Arguments) *Bun {
 	}
 }
 
+// Start creates a connection to configured NATS servers, registers subscriptions, and starts the workers.
+// The call blocks until there is a fatal error or the context is closed.
+// Connection is drained before returning, which guarantees delivery of all received message to workers before exit.
 func (s *Bun) Start(ctx context.Context) error {
 	opts := nats.Options{
 		Servers:              s.args.Servers,
@@ -136,6 +139,9 @@ loop:
 	return nil
 }
 
+// Subscribe subscribes a worker to a subject, passing received messages to registered handlers.
+// Handlers are executed sequentially. Handler execution flow is interrupted if a handler returns non-nil error.
+// It's safe to call this method after Start.
 func (s *Bun) Subscribe(subject string, handlers ...HandlerFunc) {
 	s.subscribeCh <- subscribe{
 		Subject:  subject,
@@ -143,6 +149,10 @@ func (s *Bun) Subscribe(subject string, handlers ...HandlerFunc) {
 	}
 }
 
+// SubscribeGroup subscribes a worker to a subject, passing received messages to registered handlers. Workers with the
+// same group name will form a queue group and only one member of the group will be selected to receive a message.
+// Handlers are executed sequentially. Handler execution flow is interrupted if a handler returns non-nil error.
+// It's safe to call this method after Start.
 func (s *Bun) SubscribeGroup(subject, group string, handlers ...HandlerFunc) {
 	s.subscribeCh <- subscribe{
 		Subject:  subject,
