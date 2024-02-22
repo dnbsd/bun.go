@@ -113,8 +113,8 @@ loop:
 			}
 
 		case worker := <-schedulerCh:
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				defer wg.Done()
 				_ = worker.Start(context.Background())
 			}()
