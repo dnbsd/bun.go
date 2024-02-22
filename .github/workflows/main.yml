@@ -1,0 +1,14 @@
+name: Workflow
+on: [push]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: go/src/github.com/dnbsd/bun.go
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "${{ matrix.go_version }}"
+      - run: make test
+        working-directory: go/src/github.com/dnbsd/bun.go
