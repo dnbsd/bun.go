@@ -31,6 +31,9 @@ func (c *Context) String(s string) error {
 
 // Error sends string value of an error to a Reply topic. If error is nil, the method has no effect.
 func (c *Context) Error(err error) error {
+	if err == nil {
+		return nil
+	}
 	return c.msg.Respond([]byte(err.Error()))
 }
 
