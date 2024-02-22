@@ -8,24 +8,23 @@ import (
 )
 
 type Arguments struct {
-	Name           string
-	Servers        []string
-	NoRandomize    bool
-	MaxReconnect   int
-	ReconnectWait  time.Duration
-	Timeout        time.Duration
-	DrainTimeout   time.Duration
-	FlusherTimeout time.Duration
-	PingInterval   time.Duration
-	MaxPingsOut    int
-	// TODO: rename!
-	SubChanLen           int
+	Name                 string
+	Servers              []string
+	NoRandomize          bool
+	MaxReconnect         int
+	ReconnectWait        time.Duration
+	Timeout              time.Duration
+	DrainTimeout         time.Duration
+	FlusherTimeout       time.Duration
+	PingInterval         time.Duration
+	MaxPingsOut          int
 	User                 string
 	Password             string
 	Token                string
 	Compression          bool
 	IgnoreAuthErrorAbort bool
 	SkipHostLookup       bool
+	MsgChanCapacity      int
 }
 
 type subscribe struct {
@@ -94,7 +93,7 @@ loop:
 	for {
 		select {
 		case req := <-s.subscribeCh:
-			msgCh := make(chan *nats.Msg, s.args.SubChanLen)
+			msgCh := make(chan *nats.Msg, messageChannelCapacity(s.args.MsgChanCapacity))
 			sub, err := nc.ChanQueueSubscribe(req.Subject, req.Group, msgCh)
 			if err != nil {
 				break loop
@@ -159,4 +158,12 @@ func (s *Bun) SubscribeGroup(subject, group string, handlers ...HandlerFunc) {
 		Group:    group,
 		Handlers: handlers,
 	}
+}
+
+func messageChannelCapacity(v int) int {
+	const defaultValue = 65535
+	if v == 0 {
+		return defaultValue
+	}
+	return v
 }
