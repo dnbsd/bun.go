@@ -25,6 +25,8 @@ type Arguments struct {
 	IgnoreAuthErrorAbort bool
 	SkipHostLookup       bool
 	MsgChanCapacity      int
+	UserJWTHandler       UserJWTHandlerFunc
+	SignatureHandler     SignatureHandlerFunc
 }
 
 type subscribe struct {
@@ -39,8 +41,6 @@ type Bun struct {
 	ConnectedHandler    ConnHandlerFunc
 	ReconnectedHandler  ConnHandlerFunc
 	DisconnectedHandler ConnErrHandlerFunc
-	UserJWTHandler      UserJWTHandlerFunc
-	SignatureHandler    SignatureHandlerFunc
 	ErrorHandler        ErrorHandlerFunc
 }
 
@@ -74,11 +74,11 @@ func (s *Bun) Start(ctx context.Context) error {
 		Compression:          s.args.Compression,
 		IgnoreAuthErrorAbort: s.args.IgnoreAuthErrorAbort,
 		SkipHostLookup:       s.args.SkipHostLookup,
+		UserJWT:              s.args.UserJWTHandler,
+		SignatureCB:          s.args.SignatureHandler,
 		ConnectedCB:          s.ConnectedHandler,
 		ReconnectedCB:        s.ReconnectedHandler,
 		DisconnectedErrCB:    s.DisconnectedHandler,
-		UserJWT:              s.UserJWTHandler,
-		SignatureCB:          s.SignatureHandler,
 	}
 
 	nc, err := opts.Connect()
