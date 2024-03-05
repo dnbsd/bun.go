@@ -39,6 +39,8 @@ type Bun struct {
 	ConnectedHandler    ConnHandlerFunc
 	ReconnectedHandler  ConnHandlerFunc
 	DisconnectedHandler ConnErrHandlerFunc
+	UserJWTHandler      UserJWTHandlerFunc
+	SignatureHandler    SignatureHandlerFunc
 	ErrorHandler        ErrorHandlerFunc
 }
 
@@ -75,6 +77,8 @@ func (s *Bun) Start(ctx context.Context) error {
 		ConnectedCB:          s.ConnectedHandler,
 		ReconnectedCB:        s.ReconnectedHandler,
 		DisconnectedErrCB:    s.DisconnectedHandler,
+		UserJWT:              s.UserJWTHandler,
+		SignatureCB:          s.SignatureHandler,
 	}
 
 	nc, err := opts.Connect()

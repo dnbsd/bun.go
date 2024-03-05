@@ -8,4 +8,8 @@ type ConnHandlerFunc = nats.ConnHandler
 
 type ConnErrHandlerFunc = nats.ConnErrHandler
 
+type UserJWTHandlerFunc = nats.UserJWTHandler
+
+type SignatureHandlerFunc = nats.SignatureHandler
+
 type ErrorHandlerFunc func(error, *Context)
