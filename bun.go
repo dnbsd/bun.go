@@ -142,6 +142,9 @@ loop:
 // Handlers are executed sequentially. Handler execution flow is interrupted if a handler returns non-nil error.
 // It's safe to call this method after Start.
 func (s *Bun) Subscribe(subject string, handlers ...HandlerFunc) {
+	if len(handlers) == 0 {
+		return
+	}
 	s.subscribeCh <- subscribe{
 		Subject:  subject,
 		Handlers: handlers,
@@ -153,6 +156,9 @@ func (s *Bun) Subscribe(subject string, handlers ...HandlerFunc) {
 // Handlers are executed sequentially. Handler execution flow is interrupted if a handler returns non-nil error.
 // It's safe to call this method after Start.
 func (s *Bun) SubscribeGroup(subject, group string, handlers ...HandlerFunc) {
+	if len(handlers) == 0 {
+		return
+	}
 	s.subscribeCh <- subscribe{
 		Subject:  subject,
 		Group:    group,
