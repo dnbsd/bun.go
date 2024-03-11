@@ -88,9 +88,8 @@ func (s *Bun) Start(ctx context.Context) error {
 	defer nc.Close()
 
 	var (
-		wg          sync.WaitGroup
-		workers     []*worker
-		schedulerCh = make(chan *worker, 128)
+		wg      sync.WaitGroup
+		workers []*worker
 	)
 
 loop:
@@ -109,19 +108,13 @@ loop:
 				Handlers:       req.Handlers,
 				ErrorHandler:   s.ErrorHandler,
 			}
-			workers = append(workers, w)
-			select {
-			case schedulerCh <- w:
-			case <-ctx.Done():
-				break loop
-			}
-
-		case worker := <-schedulerCh:
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				_ = worker.Start(context.Background())
+				_ = w.Start(context.Background())
 			}()
+
+			workers = append(workers, w)
 
 		case <-ctx.Done():
 			break loop
