@@ -63,6 +63,70 @@ type Arguments struct {
 	SignatureHandler SignatureHandlerFunc
 }
 
+func (a Arguments) GetMaxReconnect() int {
+	defaultValue := 60
+	if a.MaxReconnect == 0 {
+		return defaultValue
+	}
+	return a.MaxReconnect
+}
+
+func (a Arguments) GetReconnectWait() time.Duration {
+	defaultValue := 2 * time.Second
+	if a.ReconnectWait == 0 {
+		return defaultValue
+	}
+	return a.ReconnectWait
+}
+
+func (a Arguments) GetTimeout() time.Duration {
+	defaultValue := 2 * time.Second
+	if a.Timeout == 0 {
+		return defaultValue
+	}
+	return a.Timeout
+}
+
+func (a Arguments) GetDrainTimeout() time.Duration {
+	defaultValue := 30 * time.Second
+	if a.DrainTimeout == 0 {
+		return defaultValue
+	}
+	return a.DrainTimeout
+}
+
+func (a Arguments) GetFlusherTimeout() time.Duration {
+	defaultValue := 1 * time.Minute
+	if a.FlusherTimeout == 0 {
+		return defaultValue
+	}
+	return a.FlusherTimeout
+}
+
+func (a Arguments) GetPingInterval() time.Duration {
+	defaultValue := 2 * time.Minute
+	if a.PingInterval == 0 {
+		return defaultValue
+	}
+	return a.PingInterval
+}
+
+func (a Arguments) GetMaxPingsOut() int {
+	defaultValue := 2
+	if a.MaxPingsOut == 0 {
+		return defaultValue
+	}
+	return a.MaxPingsOut
+}
+
+func (a Arguments) GetMsgChanCapacity() int {
+	defaultValue := 65535
+	if a.MsgChanCapacity == 0 {
+		return defaultValue
+	}
+	return a.MsgChanCapacity
+}
+
 type subscribe struct {
 	Subject  string
 	Group    string
@@ -130,7 +194,7 @@ loop:
 	for {
 		select {
 		case req := <-s.subscribeCh:
-			msgCh := make(chan *nats.Msg, messageChannelCapacity(s.args.MsgChanCapacity))
+			msgCh := make(chan *nats.Msg, s.args.GetMsgChanCapacity())
 			sub, err := nc.ChanQueueSubscribe(req.Subject, req.Group, msgCh)
 			if err != nil {
 				break loop
@@ -195,12 +259,4 @@ func (s *Bun) SubscribeGroup(subject, group string, handlers ...HandlerFunc) {
 		Group:    group,
 		Handlers: handlers,
 	}
-}
-
-func messageChannelCapacity(v int) int {
-	const defaultValue = 65535
-	if v == 0 {
-		return defaultValue
-	}
-	return v
 }
