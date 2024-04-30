@@ -260,6 +260,41 @@ func TestStatusHandler(t *testing.T) {
 	}
 }
 
+func TestContextClose(t *testing.T) {
+	_, nc := newNatsServerAndConnection(t)
+	s := bun.New(bun.Arguments{
+		Servers: []string{
+			"localhost:14444",
+		},
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s.Subscribe("test.context", func(c *bun.Context) error {
+		cancel()
+		var resp string
+		select {
+		case <-time.After(2 * time.Second):
+			resp = "timeout"
+		case <-c.Context().Done():
+			resp = "ok"
+		}
+		return c.String(resp)
+	})
+
+	go func() {
+		err := s.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	time.Sleep(1 * time.Second)
+
+	{
+		resp, err := nc.Request("test.context", []byte(""), 5*time.Second)
+		assert.NoError(t, err)
+		assert.Equal(t, "ok", string(resp.Data))
+	}
+}
+
 func newNatsServer(port int) *server.Server {
 	opts := natsserver.DefaultTestOptions
 	opts.NoLog = false

@@ -12,7 +12,7 @@ type worker struct {
 	ErrorHandler   ErrorHandlerFunc
 }
 
-func (w *worker) Start(_ context.Context) error {
+func (w *worker) Start(ctx context.Context) error {
 	for {
 		select {
 		case msg, ok := <-w.MessageChannel:
@@ -21,6 +21,7 @@ func (w *worker) Start(_ context.Context) error {
 			}
 
 			c := &Context{
+				ctx: ctx,
 				msg: msg,
 			}
 			for _, handler := range w.Handlers {

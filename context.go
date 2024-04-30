@@ -1,12 +1,19 @@
 package bun
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/nats-io/nats.go"
 )
 
 type Context struct {
+	ctx context.Context
 	msg *nats.Msg
+}
+
+// Context returns the service context.
+func (c *Context) Context() context.Context {
+	return c.ctx
 }
 
 // BindJSON unmarshals data from NATS message into v.

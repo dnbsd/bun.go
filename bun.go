@@ -209,7 +209,7 @@ loop:
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				_ = w.Start(context.Background())
+				_ = w.Start(ctx)
 			}()
 
 			workers = append(workers, w)
