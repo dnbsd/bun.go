@@ -220,11 +220,7 @@ loop:
 	}
 
 	for i := range workers {
-		err := workers[i].Subscription.Drain()
-		if err != nil {
-			continue
-		}
-
+		_ = workers[i].Subscription.Drain()
 		close(workers[i].MessageChannel)
 	}
 
