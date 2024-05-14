@@ -197,7 +197,7 @@ loop:
 			msgCh := make(chan *nats.Msg, s.args.GetMsgChanCapacity())
 			sub, err := nc.ChanQueueSubscribe(req.Subject, req.Group, msgCh)
 			if err != nil {
-				break loop
+				return err
 			}
 
 			w := &worker{
