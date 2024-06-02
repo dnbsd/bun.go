@@ -188,6 +188,7 @@ func (s *Bun) Start(ctx context.Context) error {
 	var (
 		wg      sync.WaitGroup
 		workers []*worker
+		exitErr error
 	)
 
 loop:
@@ -197,7 +198,8 @@ loop:
 			msgCh := make(chan *nats.Msg, s.args.GetMsgChanCapacity())
 			sub, err := nc.ChanQueueSubscribe(req.Subject, req.Group, msgCh)
 			if err != nil {
-				return err
+				exitErr = err
+				break loop
 			}
 
 			w := &worker{
@@ -226,7 +228,7 @@ loop:
 
 	wg.Wait()
 
-	return nil
+	return exitErr
 }
 
 // Subscribe subscribes a worker to a subject, passing received messages to registered handlers.
